@@ -33,88 +33,110 @@ the parameters P, nS, nA, gamma are defined as follows:
 """
 
 def policy_evaluation(P, nS, nA, policy, gamma=0.9, tol=1e-3):
-	"""Evaluate the value function from a given policy.
+    """Evaluate the value function from a given policy.
 
-	Parameters
-	----------
-	P, nS, nA, gamma:
-		defined at beginning of file
-	policy: np.array[nS]
-		The policy to evaluate. Maps states to actions.
-	tol: float
-		Terminate policy evaluation when
-			max |value_function(s) - prev_value_function(s)| < tol
-	Returns
-	-------
-	value_function: np.ndarray[nS]
-		The value function of the given policy, where value_function[s] is
-		the value of state s
-	"""
+    Parameters
+    ----------
+    P, nS, nA, gamma:
+        defined at beginning of file
+    policy: np.array[nS]
+        The policy to evaluate. Maps states to actions.
+    tol: float
+        Terminate policy evaluation when
+            max |value_function(s) - prev_value_function(s)| < tol
+    Returns
+    -------
+    value_function: np.ndarray[nS]
+        The value function of the given policy, where value_function[s] is
+        the value of state s
+    """
 
-	value_function = np.zeros(nS)
-
-	############################
-	# YOUR IMPLEMENTATION HERE #
-
-	############################
-	return value_function
-
-
+    value_function = np.zeros(nS)
+    ############################
+    # YOUR IMPLEMENTATION HERE #
+    discount = gamma
+    tolerance = tol
+    while True:
+        new_value_function = np.copy(value_function)
+        for s_idx in range(nS):
+            a = policy[s_idx]
+            v_s = 0.0
+            for (p, s_, r, t) in P[s_idx][a]:
+                v_s += (p * (r + discount*value_function[s_]))
+            new_value_function[s_idx] = v_s
+        if np.all(np.abs(new_value_function - value_function) <= tolerance):
+            break
+        value_function = new_value_function
+    ############################
+    return value_function
+    
 def policy_improvement(P, nS, nA, value_from_policy, policy, gamma=0.9):
-	"""Given the value function from policy improve the policy.
+    """Given the value function from policy improve the policy.
 
-	Parameters
-	----------
-	P, nS, nA, gamma:
-		defined at beginning of file
-	value_from_policy: np.ndarray
-		The value calculated from the policy
-	policy: np.array
-		The previous policy.
+    Parameters
+    ----------
+    P, nS, nA, gamma:
+        defined at beginning of file
+    value_from_policy: np.ndarray
+        The value calculated from the policy
+    policy: np.array
+        The previous policy.
 
-	Returns
-	-------
-	new_policy: np.ndarray[nS]
-		An array of integers. Each integer is the optimal action to take
-		in that state according to the environment dynamics and the
-		given value function.
-	"""
+    Returns
+    -------
+    new_policy: np.ndarray[nS]
+        An array of integers. Each integer is the optimal action to take
+        in that state according to the environment dynamics and the
+        given value function.
+    """
 
-	new_policy = np.zeros(nS, dtype='int')
+    new_policy = np.zeros(nS, dtype='int')
+    ############################
+    # YOUR IMPLEMENTATION HERE #
+    discount = gamma
+    for s_idx in range(nS):
+        Q = np.zeros(nA)
+        temp = -np.inf
+        for action in range(nA):
+            for (p, s_, r, t) in P[s_idx][action]:
+                Q[action] += p * (r + discount * value_from_policy[s_])
 
-	############################
-	# YOUR IMPLEMENTATION HERE #
-
-	############################
-	return new_policy
-
-
+            if temp < Q[action]:
+                temp = Q[action]
+                new_policy[s_idx] = action
+    ############################
+    return new_policy
+    
 def policy_iteration(P, nS, nA, gamma=0.9, tol=10e-3):
-	"""Runs policy iteration.
+    """Runs policy iteration.
 
-	You should call the policy_evaluation() and policy_improvement() methods to
-	implement this method.
+    You should call the policy_evaluation() and policy_improvement() methods to
+    implement this method.
 
-	Parameters
-	----------
-	P, nS, nA, gamma:
-		defined at beginning of file
-	tol: float
-		tol parameter used in policy_evaluation()
-	Returns:
-	----------
-	value_function: np.ndarray[nS]
-	policy: np.ndarray[nS]
-	"""
+    Parameters
+    ----------
+    P, nS, nA, gamma:
+        defined at beginning of file
+    tol: float
+        tol parameter used in policy_evaluation()
 
-	value_function = np.zeros(nS)
-	policy = np.zeros(nS, dtype=int)
-
-	############################
-	# YOUR IMPLEMENTATION HERE #
-
-	############################
-	return value_function, policy
+    Returns:
+    ----------
+    value_function: np.ndarray[nS]
+    policy: np.ndarray[nS]
+    """
+    ############################
+    # YOUR IMPLEMENTATION HERE #
+    curr_policy = np.zeros(nS, dtype=int)
+    new_policy = np.zeros(nS, dtype=int)
+    while True:
+        curr_policy = new_policy
+        value_function = policy_evaluation(P, nS, nA, curr_policy, gamma, tol)
+        new_policy = policy_improvement(P, nS, nA, value_function, curr_policy, gamma)
+        if  np.all(new_policy == curr_policy):
+            break
+    ############################
+    return value_function, new_policy
 
 def value_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
 	"""
@@ -136,41 +158,53 @@ def value_iteration(P, nS, nA, gamma=0.9, tol=1e-3):
 
 	value_function = np.zeros(nS)
 	policy = np.zeros(nS, dtype=int)
-	############################
-	# YOUR IMPLEMENTATION HERE #
-
-	############################
+	discount = gamma
+	tolerance = tol
+	while True:
+		new_value_function = np.copy(value_function)
+		for s_idx in range(nS):
+			for a_idx in range(nA):
+				tmp=0
+				for (p, s_, r, t) in P[s_idx][a_idx]:
+					tmp += p * (r + discount * value_function[s_])
+				if tmp > new_value_function[s_idx]:
+					new_value_function[s_idx] = tmp
+		if np.all(np.abs(new_value_function - value_function) <= tolerance):
+			break
+		value_function = new_value_function
+		policy = policy_improvement(P, nS, nA, value_function, policy, 0.9)
+                
 	return value_function, policy
 
 def render_single(env, policy, max_steps=100):
-  """
-    This function does not need to be modified
-    Renders policy once on environment. Watch your agent play!
+	"""
+	This function does not need to be modified
+	Renders policy once on environment. Watch your agent play!
 
-    Parameters
-    ----------
-    env: gym.core.Environment
-      Environment to play on. Must have nS, nA, and P as
-      attributes.
-    Policy: np.array of shape [env.nS]
-      The action to take at a given state
-  """
+	Parameters
+	----------
+	env: gym.core.Environment
+		Environment to play on. Must have nS, nA, and P as
+		attributes.
+	Policy: np.array of shape [env.nS]
+		The action to take at a given state
+	"""
 
-  episode_reward = 0
-  ob = env.reset()
-  for t in range(max_steps):
-    env.render()
-    time.sleep(0.25)
-    a = policy[ob]
-    ob, rew, done, _ = env.step(a)
-    episode_reward += rew
-    if done:
-      break
-  env.render();
-  if not done:
-    print("The agent didn't reach a terminal state in {} steps.".format(max_steps))
-  else:
-  	print("Episode reward: %f" % episode_reward)
+	episode_reward = 0
+	ob = env.reset()
+	for t in range(max_steps):
+		env.render()
+		time.sleep(0.25)
+		a = policy[ob]
+		ob, rew, done, _ = env.step(a)
+		episode_reward += rew
+		if done:
+			break
+	env.render();
+	if not done:
+		print("The agent didn't reach a terminal state in {} steps.".format(max_steps))
+	else:
+		print("Episode reward: %f" % episode_reward)
 
 
 # Edit below to run policy and value iteration on different environments and
@@ -183,7 +217,7 @@ if __name__ == "__main__":
 	# env = gym.make("Stochastic-4x4-FrozenLake-v0")
 
 	print("\n" + "-"*25 + "\nBeginning Policy Iteration\n" + "-"*25)
-
+	
 	V_pi, p_pi = policy_iteration(env.P, env.nS, env.nA, gamma=0.9, tol=1e-3)
 	render_single(env, p_pi, 100)
 
